@@ -24,10 +24,6 @@ Run multiple [Laravel Sail](https://laravel.com/docs/sail) branches in parallel 
 
 Your **main branch** runs the full Sail stack (MySQL, Redis, Mailpit, etc.). Each additional branch runs only its app container over a shared Docker network, with its own database, ports, and dependencies.
 
-## Why
-
-Switching branches in a Laravel project means stopping containers, possibly resetting databases, and losing your working state. Sailor lets you run multiple branches side-by-side, each fully isolated, so you can develop on a feature while reviewing a PR on another port.
-
 ## Install
 
 ```bash
