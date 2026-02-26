@@ -9,10 +9,10 @@
     │  └────┬───┘ └───┬───┘ └───┬───┘ └─────────┘  │
     └───────┼─────────┼─────────┼──────────────────┘
             │         │         │
-    ════════╪═════════╪═════════╪══════  sail_shared network
+    ════════╪═════════╪═════════╪══════  sail network
             │         │         │
     ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-    │ App :8080    │ │ App :8081    │ │ App :8081    │
+    │ App :8080    │ │ App :8081    │ │ App :8082    │
     │ feature-a    │ │ hotfix-b     │ │ feature-b    │
     │ (copy vendor)│ │ (copy vendor)│ │ (copy vendor)│
     └──────────────┘ └──────────────┘ └──────────────┘
@@ -22,7 +22,7 @@
 
 Run multiple [Laravel Sail](https://laravel.com/docs/sail) branches in parallel using git worktrees.
 
-Your **main branch** runs the full Sail stack (MySQL, Redis, Mailpit, etc.). Each additional branch runs only its app container over a shared Docker network, with its own database, ports, and dependencies.
+Your **main branch** runs the full Sail stack (MySQL/PostgreSQL, Redis, Mailpit, etc.). Each additional branch runs only its app container connected to the main Sail network, with its own database, ports, and dependencies.
 
 ## Install
 
@@ -41,8 +41,8 @@ go build -o sailor ./
 ## Quick Start
 
 ```bash
-# 1. Initialize Sailor in your Laravel project (creates shared network, patches compose)
-sailor init
+# 1. Start your main branch as usual
+sail up -d
 
 # 2. Add a branch to work on in parallel
 sailor add feature/payments
@@ -60,29 +60,28 @@ sailor ports
 
 | Command | Description |
 |---------|-------------|
-| `sailor init` | Create shared Docker network and patch the main docker-compose.yml |
-| `sailor add <branch>` | Create a git worktree with its own DB, ports, .env, and patched compose |
+| `sailor add <branch>` | Create a git worktree with its own DB, ports, .env, and compose override |
 | `sailor up` | Start the app container and run pending migrations |
 | `sailor down` | Stop the app container |
 | `sailor list` | List all worktrees and their status |
 | `sailor ports` | Show port allocation across all worktrees |
 | `sailor status` | Show Docker container details |
-| `sailor remove` | Stop container, drop DB, restore compose backup, remove worktree |
+| `sailor remove` | Stop container, drop DB, and remove worktree |
 
 ## How It Works
 
-1. **`sailor init`** creates a `sail_shared` Docker network and patches the main branch's `docker-compose.yml` to connect to it.
-
-2. **`sailor add <branch>`** does the heavy lifting:
+1. **`sailor add <branch>`** does the heavy lifting:
    - Creates a git worktree for the branch
    - Copies `vendor/` and `node_modules/` from main
-   - Creates a dedicated MySQL database
+   - Creates a dedicated database (MySQL or PostgreSQL)
    - Generates a `.env` with unique `APP_PORT` and `VITE_PORT`
-   - Patches the worktree's `docker-compose.yml` to disable infra services (only the app container runs)
+   - Writes a `docker-compose.override.yml` that disables infra services and connects to the main Sail network
 
-3. **`sailor up/down`** starts and stops the app container in the current worktree.
+2. **`sailor up/down`** starts and stops the app container in the current worktree.
 
-4. **`sailor remove`** cleans up everything: stops the container, drops the database, restores the original compose file, and removes the git worktree.
+3. **`sailor remove`** cleans up everything: stops the container, drops the database, deletes the override file, and removes the git worktree.
+
+The original `docker-compose.yml` is **never modified**. Sailor uses Docker Compose's native [override mechanism](https://docs.docker.com/compose/how-tos/multiple-compose-files/merge/) to layer worktree-specific configuration on top.
 
 ## Port Allocation
 
@@ -96,8 +95,8 @@ Use `sailor ports` to see the full allocation map.
 ## Design Principles
 
 - **Zero config files** - all state is discovered at runtime from git worktrees, compose files, `.env` files, and running containers
-- **Non-destructive** - compose files are backed up before modification and restored on removal
-- **Minimal overhead** - worktrees share the main branch's infra services (MySQL, Redis, etc.) over the Docker network
+- **Non-destructive** - the original `docker-compose.yml` is never touched; overrides are generated and cleaned up automatically
+- **Minimal overhead** - worktrees share the main branch's infra services (MySQL, Redis, etc.) over the Sail network
 
 ## Requirements
 
