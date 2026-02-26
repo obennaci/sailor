@@ -13,8 +13,7 @@ var rootCmd = &cobra.Command{
 
 Architecture:
   - Your MAIN branch runs the full Sail stack (MySQL, Redis, etc.) as usual
-  - A shared Docker network connects everything
-  - Each WORKTREE runs ONLY the app container, sharing the main infra
+  - Each WORKTREE runs ONLY the app container, connected to the main Sail network
   - Each worktree gets its own database (same MySQL instance)
   - Dependencies are copied (independent per worktree)`,
 }
@@ -26,7 +25,6 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(upCmd)
 	rootCmd.AddCommand(downCmd)

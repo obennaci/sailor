@@ -329,3 +329,30 @@ func execShell(command string) error {
 	c.Stderr = os.Stderr
 	return c.Run()
 }
+
+func addToGitignore(root string, entries ...string) {
+	gitignorePath := filepath.Join(root, ".gitignore")
+
+	existing := ""
+	if data, err := os.ReadFile(gitignorePath); err == nil {
+		existing = string(data)
+	}
+
+	var toAdd []string
+	for _, entry := range entries {
+		if !strings.Contains(existing, entry) {
+			toAdd = append(toAdd, entry)
+		}
+	}
+
+	if len(toAdd) > 0 {
+		f, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return
+		}
+		defer f.Close()
+		for _, entry := range toAdd {
+			f.WriteString(entry + "\n")
+		}
+	}
+}
